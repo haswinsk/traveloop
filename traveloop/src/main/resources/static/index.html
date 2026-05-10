@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Traveloop — Japan Trip</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    :root{
+      --bg:#FAFAF8;
+      --surface:#FFFFFF;
+      --border:#E8E4DC;
+      --border2:#D4CEC4;
+      --text:#1A1714;
+      --muted:#7A7468;
+      --muted2:#B0A89C;
+      --accent:#C8472A;
+      --accent2:#E05A38;
+      --blue:#2563BE;
+      --green:#1B7A4E;
+      --sidebar-w:220px;
+      --topbar-h:52px;
+      --ff-head:'Cormorant Garamond',Georgia,serif;
+      --ff-body:'Outfit',sans-serif;
+    }
+    html,body{height:100%;overflow:hidden;font-family:var(--ff-body);background:var(--bg);color:var(--text);}
+
+    /* TOPBAR */
+    .topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);z-index:900;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--border);}
+    .tb-left,.tb-right,.tb-center{display:flex;align-items:center;gap:8px;}
+    .tb-center{flex:1;justify-content:center;}
+
+    .logo{display:flex;align-items:center;gap:9px;text-decoration:none;}
+    .logo-mark{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--ff-head);font-weight:700;font-size:18px;color:#fff;letter-spacing:-0.5px;}
+    .logo-name{font-family:var(--ff-head);font-size:20px;font-weight:700;color:var(--text);letter-spacing:-0.3px;}
+
+    .trip-title-bar{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:9999px;padding:6px 14px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:.15s;}
+    .trip-title-bar:hover{border-color:var(--border2);color:var(--text);}
+    .trip-title-bar span{font-weight:600;color:var(--text);}
+    .trip-title-bar svg{width:14px;height:14px;color:var(--muted2);}
+
+    .topbar-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--green);background:#EFF8F3;border:1px solid #B7E4CB;border-radius:9999px;padding:4px 10px;font-weight:500;}
+    .topbar-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;}
+
+    .icon-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:9999px;padding:7px 14px;font-size:12px;font-weight:600;font-family:var(--ff-body);background:var(--surface);color:var(--text);cursor:pointer;transition:.15s;white-space:nowrap;}
+    .icon-btn:hover{border-color:var(--border2);background:var(--bg);}
+    .icon-btn svg{width:14px;height:14px;}
+    .icon-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .icon-btn.primary:hover{background:var(--accent2);border-color:var(--accent2);}
+
+    .avatar-stack{display:flex;}
+    .av{width:28px;height:28px;border-radius:50%;border:2px solid var(--surface);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff;margin-left:-7px;}
+    .av:first-child{margin-left:0;}
+
+    /* LAYOUT */
+    .app{display:flex;height:100%;padding-top:var(--topbar-h);}
+
+    /* SIDEBAR */
+    .sidebar{position:fixed;top:var(--topbar-h);left:0;bottom:0;width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;z-index:800;}
+    .sidebar::-webkit-scrollbar{width:3px;}
+    .sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+    .sb-trip-info{padding:14px 14px 10px;border-bottom:1px solid var(--border);}
+    .sb-trip-name{font-family:var(--ff-head);font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.2;}
+    .sb-trip-dates{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;}
+    .sb-trip-dates svg{width:11px;height:11px;}
+
+    .sb-ai-btn{margin:10px 10px 0;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1a1a2e,#2d1b69);border-radius:12px;padding:9px 12px;cursor:pointer;transition:.15s;}
+    .sb-ai-btn:hover{opacity:.9;transform:translateY(-1px);}
+    .sb-ai-icon{width:28px;height:28px;background:rgba(255,255,255,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+    .sb-ai-text{font-size:12px;font-weight:600;color:#fff;line-height:1.3;}
+    .sb-ai-sub{font-size:10px;color:rgba(255,255,255,0.55);}
+
+    .sb-section{padding:10px 0 4px;}
+    .sb-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);padding:4px 14px 2px;}
+    .sb-item{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-radius:10px;margin:1px 8px;transition:.12s;}
+    .sb-item:hover{color:var(--text);background:var(--bg);}
+    .sb-item.active{color:var(--accent);background:#FDF0ED;}
+    .sb-item svg{width:14px;height:14px;flex-shrink:0;}
+    .sb-item .badge{margin-left:auto;background:var(--accent);color:#fff;font-size:9px;font-weight:700;border-radius:9999px;padding:2px 6px;}
+
+    .sb-divider{height:1px;background:var(--border);margin:6px 14px;}
+
+    .sb-day-head{display:flex;align-items:center;justify-content:space-between;padding:6px 14px 4px;cursor:pointer;}
+    .sb-day-head span{font-size:12px;font-weight:600;color:var(--text);}
+    .sb-day-item{display:flex;align-items:center;gap:7px;padding:6px 14px 6px 24px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:8px;margin:1px 8px;transition:.12s;}
+    .sb-day-item:hover{color:var(--text);background:var(--bg);}
+    .sb-day-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+    .sb-footer{margin-top:auto;border-top:1px solid var(--border);padding:10px 14px 14px;}
+    .sb-footer-item{display:flex;align-items:center;gap:7px;padding:6px 0;font-size:12px;color:var(--muted);cursor:pointer;transition:.12s;}
+    .sb-footer-item:hover{color:var(--text);}
+    .sb-footer-item svg{width:13px;height:13px;}
+
+    /* WORKSPACE */
+    .workspace{margin-left:var(--sidebar-w);width:calc(100vw - var(--sidebar-w));height:calc(100vh - var(--topbar-h));display:flex;overflow:hidden;}
+
+    /* CONTENT PANEL */
+    .content{width:50%;height:100%;overflow-y:auto;border-right:1px solid var(--border);background:var(--surface);}
+    .content::-webkit-scrollbar{width:3px;}
+    .content::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+    /* HERO */
+    .hero{position:relative;height:200px;overflow:hidden;}
+    .hero-img{width:100%;height:100%;object-fit:cover;display:block;}
+    .hero-gradient{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.05),rgba(0,0,0,0.5));}
+    .hero-meta{position:absolute;bottom:14px;left:18px;right:18px;}
+    .hero-country{font-family:var(--ff-head);font-size:11px;font-weight:600;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.15em;margin-bottom:2px;}
+    .hero-name{font-family:var(--ff-head);font-size:30px;font-weight:700;color:#fff;line-height:1.1;}
+    .hero-dates{font-size:12px;color:rgba(255,255,255,.75);margin-top:4px;}
+    .hero-actions{position:absolute;top:12px;right:12px;display:flex;gap:6px;}
+    .hero-action-btn{width:34px;height:34px;background:rgba(255,255,255,.92);border-radius:9999px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.12);transition:.15s;}
+    .hero-action-btn:hover{background:#fff;transform:scale(1.05);}
+
+    /* TRIP STATS BAR */
+    .stats-bar{display:flex;border-bottom:1px solid var(--border);background:var(--surface);}
+    .stat-item{flex:1;padding:12px 14px;border-right:1px solid var(--border);cursor:pointer;transition:.15s;}
+    .stat-item:last-child{border-right:none;}
+    .stat-item:hover{background:var(--bg);}
+    .stat-label{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:2px;}
+    .stat-val{font-size:14px;font-weight:700;color:var(--text);}
+    .stat-val.green{color:var(--green);}
+    .stat-val.accent{color:var(--accent);}
+
+    /* SECTIONS */
+    .section{padding:18px 18px;border-bottom:1px solid var(--border);}
+    .sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+    .sec-title{font-family:var(--ff-head);font-size:17px;font-weight:700;display:flex;align-items:center;gap:7px;}
+    .sec-title svg{width:16px;height:16px;color:var(--muted);}
+    .sec-action{font-size:12px;color:var(--blue);cursor:pointer;font-weight:500;transition:.12s;}
+    .sec-action:hover{opacity:.7;}
+
+    /* EXPLORE CARDS */
+    .explore-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;}
+    .explore-row::-webkit-scrollbar{height:3px;}
+    .explore-row::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+    .exp-card{flex-shrink:0;width:160px;border-radius:14px;border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:.15s;}
+    .exp-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.07);transform:translateY(-4px);}
+    .exp-card-img{width:100%;height:90px;object-fit:cover;display:block;}
+    .exp-card-body{padding:9px 10px;}
+    .exp-card-title{font-size:11px;font-weight:600;margin-bottom:3px;line-height:1.35;color:var(--text);}
+    .exp-card-sub{font-size:10px;color:var(--muted);line-height:1.4;}
+    .exp-card-author{display:flex;align-items:center;gap:5px;margin-top:6px;}
+    .exp-author-av{width:16px;height:16px;border-radius:50%;font-size:7px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff;}
+    .exp-author-name{font-size:10px;color:var(--muted);}
+    .exp-browse-btn{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:9999px;padding:8px 14px;font-size:12px;font-weight:600;font-family:var(--ff-body);cursor:pointer;transition:.15s;white-space:nowrap;align-self:center;}
+    .exp-browse-btn:hover{background:var(--accent2);transform:translateY(-2px);}
+    .exp-browse-btn svg{width:13px;height:13px;}
+
+    /* RESERVATIONS */
+    .res-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
+    .res-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:12px;border:1px solid var(--border);cursor:pointer;transition:.12s;position:relative;background:var(--surface);}
+    .res-item:hover{background:var(--bg);border-color:var(--border2);}
+    .res-label{font-size:9px;color:var(--muted);text-align:center;font-weight:500;}
+    .res-icon{font-size:18px;}
+    .res-badge{position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;background:var(--accent);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+
+    /* BUDGET */
+    .budget-card{background:#F0FAF5;border:1px solid #A8DBC0;border-radius:14px;padding:14px 16px;}
+    .budget-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:2px;}
+    .budget-amount{font-family:var(--ff-head);font-size:24px;font-weight:700;color:var(--text);line-height:1;}
+    .budget-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+    .budget-link{font-size:11px;color:var(--blue);cursor:pointer;margin-top:6px;font-weight:500;}
+
+    /* PLACES */
+    .places-group-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+    .group-dot{width:8px;height:8px;border-radius:50%;}
+
+    .place-card{display:flex;align-items:flex-start;gap:10px;padding:10px 11px;border-radius:12px;border:1px solid var(--border);margin-bottom:7px;cursor:pointer;transition:.15s;background:var(--surface);position:relative;}
+    .place-card:hover{border-color:var(--border2);box-shadow:0 6px 20px rgba(0,0,0,.05);transform:translateY(-2px);}
+    .place-card.active{border-color:var(--accent);background:#FDF5F3;box-shadow:0 8px 24px rgba(200,71,42,.1);transform:translateY(-3px);}
+    .pc-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;margin-top:1px;}
+    .pc-body{flex:1;min-width:0;}
+    .pc-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;line-height:1.3;}
+    .pc-type{font-size:10px;color:var(--muted);font-weight:500;}
+    .pc-desc{font-size:11px;color:var(--muted2);line-height:1.45;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .pc-img{width:60px;height:60px;border-radius:10px;object-fit:cover;flex-shrink:0;}
+
+    .add-row{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted2);cursor:pointer;padding:4px 2px;transition:.12s;margin-top:4px;}
+    .add-row:hover{color:var(--accent);}
+    .add-row svg{width:14px;height:14px;}
+
+    /* ITINERARY */
+    .itin-section{border-bottom:1px solid var(--border);}
+    .day-header{display:flex;align-items:center;gap:10px;padding:14px 18px 10px;cursor:pointer;user-select:none;}
+    .day-badge{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--text);}
+    .day-city{font-size:12px;font-weight:600;border-radius:9999px;padding:3px 10px;color:#fff;}
+    .day-chevron{margin-left:auto;font-size:10px;color:var(--muted2);transition:.2s;}
+    .day-body{padding:0 18px 14px;}
+    .day-place{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;border:1px solid var(--border);margin-bottom:6px;cursor:pointer;transition:.15s;background:var(--surface);}
+    .day-place:hover{border-color:var(--border2);background:var(--bg);}
+    .dp-time{font-size:10px;font-weight:600;color:var(--muted);min-width:50px;font-family:var(--ff-body);}
+    .dp-name{font-size:13px;font-weight:500;color:var(--text);}
+    .dp-type{font-size:10px;color:var(--muted);margin-top:1px;}
+    .dp-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}
+
+    /* MAP */
+    .map-wrap{width:50%;flex-shrink:0;position:relative;height:100%;background:#F0EDE8;overflow:hidden;}
+    #map{width:100%;height:100%;}
+    .map-btns{position:absolute;top:14px;right:14px;z-index:500;display:flex;flex-direction:column;gap:8px;}
+    .map-btn{width:40px;height:40px;border:none;border-radius:10px;background:var(--surface);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.12);transition:.15s;}
+    .map-btn:hover{background:var(--bg);transform:scale(1.05);}
+    .map-btn svg{width:16px;height:16px;color:#475569;}
+
+    .leaflet-popup-content-wrapper{border-radius:14px!important;box-shadow:0 10px 30px rgba(0,0,0,.15)!important;border:1px solid var(--border)!important;padding:0!important;overflow:hidden;}
+    .leaflet-popup-content{margin:0!important;}
+    .leaflet-control-attribution,.leaflet-control-zoom{display:none!important;}
+
+    .cm-marker{background:var(--accent);border:2.5px solid #fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.2);font-family:var(--ff-body);transition:.2s;}
+    .cm-marker.b{background:var(--blue);}
+    .cm-marker.pulse{animation:pulse-ring 1.5s ease-out;}
+    @keyframes pulse-ring{0%{box-shadow:0 0 0 0 rgba(200,71,42,.5);}70%{box-shadow:0 0 0 10px rgba(200,71,42,0);}100%{box-shadow:0 0 0 0 rgba(200,71,42,0);}}
+
+    .popup-wrap{min-width:200px;}
+    .popup-img{width:100%;height:110px;object-fit:cover;display:block;}
+    .popup-body{padding:11px 13px;background:var(--surface);}
+    .popup-stop{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px;}
+    .popup-name{font-size:14px;font-weight:700;font-family:var(--ff-head);color:var(--text);margin-bottom:2px;}
+    .popup-type{font-size:11px;color:var(--muted);}
+
+    /* EMPTY state toast */
+    .bottom-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;border-radius:9999px;padding:9px 18px;font-size:12px;font-weight:500;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;font-family:var(--ff-body);}
+    .bottom-toast.show{opacity:1;}
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-left">
+    <a class="logo" href="#">
+      <div class="logo-mark">T</div>
+      <span class="logo-name">Traveloop</span>
+    </a>
+    <div class="topbar-badge">Auto-saved</div>
+  </div>
+
+  <div class="tb-center">
+    <div class="trip-title-bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      <span>Japan Trip</span> · May 18 – 24, 2025
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </div>
+  </div>
+
+  <div class="tb-right">
+    <button class="icon-btn" onclick="showToast('Sharing options coming soon')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      Share
+    </button>
+    <button class="icon-btn primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
+      Export PDF
+    </button>
+    <div class="avatar-stack">
+      <div class="av" style="background:linear-gradient(135deg,#F59E0B,#EF4444);">K</div>
+      <div class="av" style="background:linear-gradient(135deg,#3B82F6,#8B5CF6);">H</div>
+      <div class="av" style="background:linear-gradient(135deg,#10B981,#06B6D4);">S</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sb-trip-info">
+      <div class="sb-trip-name">Trip to Japan 🇯🇵</div>
+      <div class="sb-trip-dates">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        May 18 – May 24, 2025 · 7 days
+      </div>
+    </div>
+
+    <div class="sb-ai-btn" onclick="showToast('AI Assistant loading...')">
+      <div class="sb-ai-icon">✦</div>
+      <div>
+        <div class="sb-ai-text">AI Travel Assistant</div>
+        <div class="sb-ai-sub">Ask anything about your trip</div>
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Overview</div>
+      <div class="sb-item active" onclick="scrollTo('overview');setSbActive(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        Overview
+      </div>
+      <div class="sb-item" onclick="scrollTo('explore');setSbActive(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Explore
+      </div>
+      <div class="sb-item" onclick="scrollTo('places');setSbActive(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.5 7-11A7 7 0 0 0 5 10c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="3"/></svg>
+        Places to visit
+        <span class="badge">6</span>
+      </div>
+      <div class="sb-item" onclick="scrollTo('budget');setSbActive(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M16 7H9.5a3.5 3.5 0 1 0 0 7H14a3.5 3.5 0 1 1 0 7H7"/></svg>
+        Budget
+      </div>
+      <div class="sb-item" onclick="showToast('Notes feature coming soon!')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg>
+        Notes
+      </div>
+    </div>
+
+    <div class="sb-divider"></div>
+
+    <div class="sb-section">
+      <div class="sb-day-head" onclick="toggleSbDays(this)">
+        <span>Itinerary</span>
+        <span id="sb-days-chevron" style="font-size:10px;color:var(--muted2);transition:.2s;">▼</span>
+      </div>
+      <div id="sb-days">
+        <div class="sb-day-item" onclick="focusDay(0,this)">
+          <div class="sb-day-dot" style="background:#C8472A;"></div>
+          Mon · May 18 — Kyoto
+        </div>
+        <div class="sb-day-item" onclick="focusDay(1,this)">
+          <div class="sb-day-dot" style="background:#2563BE;"></div>
+          Tue · May 19 — Tokyo
+        </div>
+        <div class="sb-day-item" onclick="focusDay(2,this)">
+          <div class="sb-day-dot" style="background:#7C3AED;"></div>
+          Wed · May 20 — Tokyo
+        </div>
+        <div class="sb-day-item" onclick="focusDay(1,this)">
+          <div class="sb-day-dot" style="background:#1B7A4E;"></div>
+          Thu · May 21 — Tokyo
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-divider"></div>
+
+    <div class="sb-section">
+      <div class="sb-label">Reservations</div>
+      <div class="sb-item" onclick="showToast('No flights added yet')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21 4 19 4s-2 1-3.5 2.5L8 9 .8 7.2C.3 7 0 7.6.4 8L3 10.5 1.6 12 4 15l3-1 3 3-1 3 2.4 2.4c.4.4 1 .1.8-.5z"/></svg>
+        Flights
+        <span class="badge" style="background:var(--muted2);">0</span>
+      </div>
+      <div class="sb-item" onclick="showToast('No lodging added yet')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V20M21 7V20M3 7a9 9 0 0 1 18 0M3 12h18"/></svg>
+        Lodging
+        <span class="badge" style="background:var(--muted2);">0</span>
+      </div>
+    </div>
+
+    <div class="sb-footer">
+      <div class="sb-footer-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+        Help & Support
+      </div>
+      <div class="sb-footer-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Send Feedback
+      </div>
+    </div>
+  </nav>
+
+  <!-- WORKSPACE -->
+  <div class="workspace">
+
+    <!-- CONTENT -->
+    <div class="content" id="content">
+
+      <!-- HERO -->
+      <div class="hero" id="overview">
+        <img class="hero-img" src="https://images.unsplash.com/photo-1526481280693-3bfa7568e0f3?auto=format&fit=crop&w=900&q=80" alt="Japan landscape"/>
+        <div class="hero-gradient"></div>
+        <div class="hero-meta">
+          <div class="hero-country">East Asia</div>
+          <div class="hero-name">Japan</div>
+          <div class="hero-dates">May 18 – May 24, 2025 · Kyoto & Tokyo</div>
+        </div>
+        <div class="hero-actions">
+          <button class="hero-action-btn" title="Edit cover" onclick="showToast('Cover photo editing coming soon')">✏️</button>
+          <button class="hero-action-btn" title="Share" onclick="showToast('Link copied!')">🔗</button>
+        </div>
+      </div>
+
+      <!-- STATS BAR -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <div class="stat-label">Duration</div>
+          <div class="stat-val">7 days</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Travelers</div>
+          <div class="stat-val">3 people</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Places</div>
+          <div class="stat-val accent">6 planned</div>
+        </div>
+        <div class="stat-item" onclick="scrollTo('budget')">
+          <div class="stat-label">Budget</div>
+          <div class="stat-val green">₹0 tracked</div>
+        </div>
+      </div>
+
+      <!-- EXPLORE -->
+      <div class="section" id="explore">
+        <div class="sec-head">
+          <div class="sec-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Explore Japan
+          </div>
+          <button class="exp-browse-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Browse all guides
+          </button>
+        </div>
+        <div class="explore-row">
+          <div class="exp-card">
+            <img class="exp-card-img" src="https://images.unsplash.com/photo-1492571350019-22de08371fd3?auto=format&fit=crop&w=320&q=80" alt="Japan guide"/>
+            <div class="exp-card-body">
+              <div class="exp-card-title">2e's Japan Video Game Guide 🎮 2025</div>
+              <div class="exp-card-sub">Community guide by a verified member</div>
+              <div class="exp-card-author">
+                <div class="exp-author-av" style="background:#F59E0B;">2</div>
+                <span class="exp-author-name">2e · 102 places</span>
+              </div>
+            </div>
+          </div>
+          <div class="exp-card">
+            <img class="exp-card-img" src="https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=320&q=80" alt="Japan guide"/>
+            <div class="exp-card-body">
+              <div class="exp-card-title">Julia Jablonska's Japan in GB & PL</div>
+              <div class="exp-card-sub">Community guide by a verified member</div>
+              <div class="exp-card-author">
+                <div class="exp-author-av" style="background:#3B82F6;">J</div>
+                <span class="exp-author-name">Julia · 78 places</span>
+              </div>
+            </div>
+          </div>
+          <div class="exp-card">
+            <img class="exp-card-img" src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=320&q=80" alt="Kyoto"/>
+            <div class="exp-card-body">
+              <div class="exp-card-title">Best of Kyoto: Temples & Gardens</div>
+              <div class="exp-card-sub">Curated by Traveloop editors</div>
+              <div class="exp-card-author">
+                <div class="exp-author-av" style="background:var(--accent);">T</div>
+                <span class="exp-author-name">Traveloop · Official</span>
+              </div>
+            </div>
+          </div>
+          <div class="exp-card">
+            <img class="exp-card-img" src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=320&q=80" alt="Tokyo"/>
+            <div class="exp-card-body">
+              <div class="exp-card-title">Transparent Hotel Search — Tokyo</div>
+              <div class="exp-card-sub">No commission-based sorting, ever</div>
+              <div class="exp-card-author">
+                <div class="exp-author-av" style="background:var(--blue);">H</div>
+                <span class="exp-author-name">Hotels · 200+ options</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESERVATIONS + BUDGET -->
+      <div class="section" id="budget" style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start;">
+        <div>
+          <div class="sec-head">
+            <div class="sec-title" style="font-size:15px;">Reservations & Attachments</div>
+          </div>
+          <div class="res-grid">
+            <div class="res-item" onclick="showToast('Add a flight reservation')">
+              <div class="res-icon">✈️</div>
+              <div class="res-label">Flight</div>
+              <div class="res-badge">0</div>
+            </div>
+            <div class="res-item" onclick="showToast('Add lodging')">
+              <div class="res-icon">🏨</div>
+              <div class="res-label">Lodging</div>
+              <div class="res-badge">0</div>
+            </div>
+            <div class="res-item" onclick="showToast('Add car rental')">
+              <div class="res-icon">🚗</div>
+              <div class="res-label">Car rental</div>
+              <div class="res-badge">0</div>
+            </div>
+            <div class="res-item" onclick="showToast('Add a restaurant')">
+              <div class="res-icon">🍜</div>
+              <div class="res-label">Restaurant</div>
+            </div>
+            <div class="res-item" onclick="showToast('Add an attachment')">
+              <div class="res-icon">📎</div>
+              <div class="res-label">Attachment</div>
+            </div>
+            <div class="res-item" onclick="showToast('Add other reservation')">
+              <div class="res-icon">⋯</div>
+              <div class="res-label">Other</div>
+            </div>
+          </div>
+        </div>
+        <div class="budget-card">
+          <div class="budget-label">Budget tracker</div>
+          <div class="budget-amount">₹0</div>
+          <div class="budget-sub">of ₹0 budget used</div>
+          <div class="budget-link">Set a budget →</div>
+        </div>
+      </div>
+
+      <!-- PLACES TO VISIT -->
+      <div class="section" id="places">
+        <div class="sec-head">
+          <div class="sec-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.5 7-11A7 7 0 0 0 5 10c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="3"/></svg>
+            Places to Visit
+          </div>
+          <span class="sec-action" onclick="toggleMapGroup(-1)">Show all on map</span>
+        </div>
+
+        <!-- Kyoto -->
+        <div style="margin-bottom:16px;">
+          <div class="places-group-label">
+            <div class="group-dot" style="background:#C8472A;"></div>
+            Kyoto Highlights
+            <span style="margin-left:auto;cursor:pointer;color:var(--blue);font-size:10px;font-weight:500;" onclick="toggleMapGroup(0)">Show only on map</span>
+          </div>
+
+          <div class="place-card" id="p0" onclick="flyTo(0)">
+            <div class="pc-num" style="background:#C8472A;">1</div>
+            <div class="pc-body">
+              <div class="pc-name">Fushimi Inari Taisha</div>
+              <div class="pc-type">🏛 Shinto shrine · Fushimi, Kyoto</div>
+              <div class="pc-desc">Mountainside Shinto shrine from 711 A.D. featuring hundreds of iconic vermillion torii gates winding through cedar forests.</div>
+            </div>
+            <img class="pc-img" src="https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?auto=format&fit=crop&w=120&q=80" alt="Fushimi Inari"/>
+          </div>
+
+          <div class="place-card" id="p1" onclick="flyTo(1)">
+            <div class="pc-num" style="background:#C8472A;">2</div>
+            <div class="pc-body">
+              <div class="pc-name">Kinkaku-ji (Golden Pavilion)</div>
+              <div class="pc-type">🏯 Buddhist temple · Northern Kyoto</div>
+              <div class="pc-desc">Historic, tranquil temple with a gold-leaf facade set amid Japanese gardens and a mirror-like reflecting pond.</div>
+            </div>
+            <img class="pc-img" src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=120&q=80" alt="Kinkakuji"/>
+          </div>
+
+          <div class="place-card" id="p2" onclick="flyTo(2)">
+            <div class="pc-num" style="background:#C8472A;">3</div>
+            <div class="pc-body">
+              <div class="pc-name">Enryaku-ji Temple</div>
+              <div class="pc-type">🏛 Tendai monastery · Mt. Hiei</div>
+              <div class="pc-desc">Sprawling 7th-century Tendai Buddhist monastery perched on the sacred peak of Mount Hiei, with sweeping valley views.</div>
+            </div>
+            <img class="pc-img" src="https://images.unsplash.com/photo-1590559899731-a382839e5549?auto=format&fit=crop&w=120&q=80" alt="Enryakuji"/>
+          </div>
+
+          <div class="add-row" onclick="showToast('Add a new Kyoto place')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+            Add a Kyoto place
+          </div>
+        </div>
+
+        <!-- Tokyo -->
+        <div>
+          <div class="places-group-label">
+            <div class="group-dot" style="background:#2563BE;"></div>
+            Tokyo Spots
+            <span style="margin-left:auto;cursor:pointer;color:var(--blue);font-size:10px;font-weight:500;" onclick="toggleMapGroup(1)">Show only on map</span>
+          </div>
+
+          <div class="place-card" id="p3" onclick="flyTo(3)">
+            <div class="pc-num" style="background:#2563BE;">1</div>
+            <div class="pc-body">
+              <div class="pc-name">Senso-ji Temple</div>
+              <div class="pc-type">🏛 Buddhist temple · Asakusa</div>
+              <div class="pc-desc">Tokyo's oldest and most beloved temple in Asakusa, anchored by the iconic Kaminarimon gate and lively Nakamise shopping arcade.</div>
+            </div>
+            <img class="pc-img" src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=120&q=80" alt="Sensoji"/>
+          </div>
+
+          <div class="place-card" id="p4" onclick="flyTo(4)">
+            <div class="pc-num" style="background:#2563BE;">2</div>
+            <div class="pc-body">
+              <div class="pc-name">Shibuya Crossing</div>
+              <div class="pc-type">🌃 Landmark · Shibuya</div>
+              <div class="pc-desc">The world-famous scramble crossing — one of the busiest pedestrian intersections on earth, spectacular at night under a sea of neon.</div>
+            </div>
+            <img class="pc-img" src="https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=120&q=80" alt="Shibuya"/>
+          </div>
+
+          <div class="place-card" id="p5" onclick="flyTo(5)">
+            <div class="pc-num" style="background:#2563BE;">3</div>
+            <div class="pc-body">
+              <div class="pc-name">teamLab Planets</div>
+              <div class="pc-type">🎨 Digital art · Toyosu</div>
+              <div class="pc-desc">Walk barefoot through immersive digital art environments of light, water, and living ecosystems in this extraordinary installation.</div>
+            </div>
+            <img class="pc-img" src="https://images.unsplash.com/photo-1518998053901-5348d3961a04?auto=format&fit=crop&w=120&q=80" alt="TeamLab"/>
+          </div>
+
+          <div class="add-row" onclick="showToast('Add a new Tokyo spot')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+            Add a Tokyo spot
+          </div>
+        </div>
+      </div>
+
+      <!-- ITINERARY HEADER -->
+      <div style="padding:16px 18px 4px;border-bottom:1px solid var(--border);">
+        <div style="font-family:var(--ff-head);font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;color:var(--muted);"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Itinerary
+        </div>
+      </div>
+
+      <!-- DAY 1 -->
+      <div class="itin-section">
+        <div class="day-header" onclick="toggleDay('d1',this)">
+          <div class="day-badge">Day 1</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">Mon, May 18</div>
+          <div class="day-city" style="background:#C8472A;">Kyoto</div>
+          <div class="day-chevron" id="d1-ch">▼</div>
+        </div>
+        <div class="day-body" id="d1">
+          <div class="day-place" onclick="flyTo(0)">
+            <div class="dp-num" style="background:#C8472A;">1</div>
+            <div>
+              <div class="dp-name">Fushimi Inari Taisha</div>
+              <div class="dp-type">Sightseeing · Allow 2–3 hrs</div>
+            </div>
+            <div class="dp-time" style="margin-left:auto;">9:00 AM</div>
+          </div>
+          <div class="day-place" onclick="flyTo(1)">
+            <div class="dp-num" style="background:#C8472A;">2</div>
+            <div>
+              <div class="dp-name">Kinkaku-ji (Golden Pavilion)</div>
+              <div class="dp-type">Temple visit · Allow 1–2 hrs</div>
+            </div>
+            <div class="dp-time" style="margin-left:auto;">2:00 PM</div>
+          </div>
+          <div class="day-place" onclick="flyTo(2)">
+            <div class="dp-num" style="background:#C8472A;">3</div>
+            <div>
+              <div class="dp-name">Enryaku-ji Temple</div>
+              <div class="dp-type">Sacred site · Optional day trip</div>
+            </div>
+            <div class="dp-time" style="margin-left:auto;">5:00 PM</div>
+          </div>
+          <div class="add-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>Add a stop</div>
+        </div>
+      </div>
+
+      <!-- DAY 2 -->
+      <div class="itin-section">
+        <div class="day-header" onclick="toggleDay('d2',this)">
+          <div class="day-badge">Day 2</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">Tue, May 19</div>
+          <div class="day-city" style="background:#2563BE;">Tokyo</div>
+          <div class="day-chevron" id="d2-ch">▼</div>
+        </div>
+        <div class="day-body" id="d2">
+          <div class="day-place" onclick="flyTo(3)">
+            <div class="dp-num" style="background:#2563BE;">1</div>
+            <div>
+              <div class="dp-name">Senso-ji Temple</div>
+              <div class="dp-type">Asakusa · Early morning visit</div>
+            </div>
+            <div class="dp-time" style="margin-left:auto;">8:00 AM</div>
+          </div>
+          <div class="day-place" onclick="flyTo(4)">
+            <div class="dp-num" style="background:#2563BE;">2</div>
+            <div>
+              <div class="dp-name">Shibuya Crossing</div>
+              <div class="dp-type">Iconic spot · Best at sunset</div>
+            </div>
+            <div class="dp-time" style="margin-left:auto;">6:00 PM</div>
+          </div>
+          <div class="day-place" onclick="flyTo(5)">
+            <div class="dp-num" style="background:#2563BE;">3</div>
+            <div>
+              <div class="dp-name">teamLab Planets</div>
+              <div class="dp-type">Digital art · Book tickets in advance</div>
+            </div>
+            <div class="dp-time" style="margin-left:auto;">8:00 PM</div>
+          </div>
+          <div class="add-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>Add a stop</div>
+        </div>
+      </div>
+
+      <div style="padding:20px 18px;border-top:1px solid var(--border);">
+        <div class="add-row" onclick="showToast('Add a new day to your itinerary')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M12 11v6M9 14h6"/></svg>
+          Add another day
+        </div>
+      </div>
+
+      <div style="height:60px;"></div>
+    </div><!-- /content -->
+
+    <!-- MAP -->
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="map-btns">
+        <button class="map-btn" onclick="map.zoomIn()" title="Zoom in">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button class="map-btn" onclick="map.zoomOut()" title="Zoom out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg>
+        </button>
+        <button class="map-btn" onclick="map.fitBounds(allBounds)" title="Fit all places">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+        </button>
+        <button class="map-btn" id="layer-btn" onclick="toggleLayer()" title="Switch map style">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/><path d="m3 18 9 5 9-5"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /workspace -->
+</div><!-- /app -->
+
+<div class="bottom-toast" id="toast"></div>
+
+<script>
+  const PLACES = [
+    {name:"Fushimi Inari Taisha",type:"Shinto shrine · Fushimi",lat:34.9671,lng:135.7727,g:0,color:"#C8472A",num:"1",img:"https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?auto=format&fit=crop&w=320&q=80"},
+    {name:"Kinkaku-ji",type:"Buddhist temple · Northern Kyoto",lat:35.0394,lng:135.7292,g:0,color:"#C8472A",num:"2",img:"https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=320&q=80"},
+    {name:"Enryaku-ji Temple",type:"Tendai monastery · Mt. Hiei",lat:35.0600,lng:135.8400,g:0,color:"#C8472A",num:"3",img:"https://images.unsplash.com/photo-1590559899731-a382839e5549?auto=format&fit=crop&w=320&q=80"},
+    {name:"Senso-ji Temple",type:"Buddhist temple · Asakusa",lat:35.7148,lng:139.7967,g:1,color:"#2563BE",num:"1",img:"https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=320&q=80"},
+    {name:"Shibuya Crossing",type:"Iconic landmark · Shibuya",lat:35.6595,lng:139.7004,g:1,color:"#2563BE",num:"2",img:"https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=320&q=80"},
+    {name:"teamLab Planets",type:"Digital art museum · Toyosu",lat:35.6499,lng:139.7965,g:1,color:"#2563BE",num:"3",img:"https://images.unsplash.com/photo-1518998053901-5348d3961a04?auto=format&fit=crop&w=320&q=80"},
+  ];
+
+  const map = L.map('map',{zoomControl:false,attributionControl:false}).setView([35.5,136.5],7);
+  const TILES = {
+    light: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}),
+    dark:  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'})
+  };
+  let activeStyle='light';
+  TILES[activeStyle].addTo(map);
+
+  function toggleLayer(){
+    map.removeLayer(TILES[activeStyle]);
+    activeStyle=activeStyle==='light'?'dark':'light';
+    TILES[activeStyle].addTo(map);
+  }
+
+  const groups=[L.layerGroup().addTo(map),L.layerGroup().addTo(map)];
+  const markers=[];
+
+  PLACES.forEach((p,i)=>{
+    const icon=L.divIcon({
+      html:`<div class="cm-marker ${p.g===1?'b':''}">${p.num}</div>`,
+      className:'',iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-16]
+    });
+    const popup=L.popup({className:'',closeButton:true,maxWidth:240}).setContent(`
+    <div class="popup-wrap">
+      <img class="popup-img" src="${p.img}" alt="${p.name}">
+      <div class="popup-body">
+        <div class="popup-stop" style="color:${p.color};">Stop ${p.num}</div>
+        <div class="popup-name">${p.name}</div>
+        <div class="popup-type">${p.type}</div>
+      </div>
+    </div>
+  `);
+    const m=L.marker([p.lat,p.lng],{icon}).addTo(groups[p.g]).bindPopup(popup);
+    m.on('click',()=>highlightCard(i));
+    markers.push(m);
+  });
+
+  // Route lines
+  const kyotoCoords=PLACES.filter(p=>p.g===0).map(p=>[p.lat,p.lng]);
+  const tokyoCoords=PLACES.filter(p=>p.g===1).map(p=>[p.lat,p.lng]);
+  L.polyline(kyotoCoords,{color:'#C8472A',weight:2.5,opacity:.6,dashArray:'6,5'}).addTo(map);
+  L.polyline(tokyoCoords,{color:'#2563BE',weight:2.5,opacity:.6,dashArray:'6,5'}).addTo(map);
+
+  const allBounds=L.latLngBounds(PLACES.map(p=>[p.lat,p.lng]));
+
+  function flyTo(i){
+    const p=PLACES[i];
+    setTimeout(()=>{
+      try{map.invalidateSize();}catch(e){}
+      map.flyTo([p.lat,p.lng],14,{duration:1.1});
+      setTimeout(()=>{if(markers[i])markers[i].openPopup();},550);
+    },80);
+    highlightCard(i);
+  }
+
+  function highlightCard(i){
+    document.querySelectorAll('.place-card').forEach(c=>c.classList.remove('active'));
+    const card=document.getElementById('p'+i);
+    if(card){
+      card.classList.add('active');
+      card.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+  }
+
+  function toggleMapGroup(which){
+    if(which===-1){
+      groups.forEach(g=>map.addLayer(g));
+      map.fitBounds(allBounds,{padding:[40,40]});
+      return;
+    }
+    groups.forEach((g,i)=>{
+      if(i===which)map.addLayer(g);
+      else map.removeLayer(g);
+    });
+    const pts=PLACES.filter(p=>p.g===which).map(p=>[p.lat,p.lng]);
+    map.fitBounds(L.latLngBounds(pts),{padding:[60,60]});
+  }
+
+  function toggleDay(id,header){
+    const body=document.getElementById(id);
+    const ch=document.getElementById(id+'-ch');
+    if(!body)return;
+    const collapsed=body.style.display==='none';
+    body.style.display=collapsed?'':'none';
+    if(ch)ch.style.transform=collapsed?'':'rotate(-90deg)';
+  }
+
+  function toggleSbDays(el){
+    const days=document.getElementById('sb-days');
+    const ch=document.getElementById('sb-days-chevron');
+    if(!days)return;
+    const c=days.style.display==='none';
+    days.style.display=c?'':'none';
+    if(ch)ch.style.transform=c?'':'rotate(-90deg)';
+  }
+
+  function focusDay(groupIdx,el){
+    document.querySelectorAll('.sb-day-item').forEach(e=>e.style.background='');
+    el.style.background='var(--bg)';
+    groups.forEach((g,i)=>{
+      g.eachLayer(m=>{
+        const e=m.getElement();
+        if(e)e.style.opacity=(i===groupIdx)?'1':'0.2';
+      });
+    });
+    const p=PLACES.find(pl=>pl.g===groupIdx);
+    if(p)flyTo(PLACES.indexOf(p));
+  }
+
+  function scrollTo(id){
+    const el=document.getElementById(id);
+    if(!el)return;
+    document.getElementById('content').scrollTo({top:el.offsetTop-52,behavior:'smooth'});
+  }
+
+  function setSbActive(item){
+    document.querySelectorAll('.sb-item').forEach(e=>e.classList.remove('active'));
+    item.classList.add('active');
+  }
+
+  let toastTimer;
+  function showToast(msg){
+    const t=document.getElementById('toast');
+    t.textContent=msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
+  }
+
+  window.addEventListener('load',()=>setTimeout(()=>{try{map.invalidateSize();}catch(e){}},200));
+  window.addEventListener('resize',()=>setTimeout(()=>{try{map.invalidateSize();}catch(e){}},120));
+</script>
+</body>
+</html>
