@@ -487,4 +487,133 @@
     setTimeout(initItinerary, 0);
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     3D ENHANCEMENTS FOR CARDS
+  ═══════════════════════════════════════════════════════════════════════ */
+
+  /**
+   * Add 3D tilt effect to itinerary day cards and experience cards
+   */
+  function apply3DEnhancementsToCards() {
+    // Add Vanilla Tilt to itinerary day cards
+    var dayCards = document.querySelectorAll('.itinerary-day-card, .exp-card');
+    if (dayCards.length > 0 && typeof VanillaTilt !== 'undefined') {
+      dayCards.forEach(function(card) {
+        if (!card.vanillaTilt) {
+          VanillaTilt.init(card, {
+            max: 12,
+            scale: 1.015,
+            speed: 300,
+            transition: true,
+            easing: "cubic-bezier(.03,.98,.52,.81)"
+          });
+        }
+      });
+    }
+
+    // Add floating animation to icon elements
+    var flightIcons = document.querySelectorAll('[data-icon="flight"]');
+    var lodgingIcons = document.querySelectorAll('[data-icon="lodging"]');
+    var carIcons = document.querySelectorAll('[data-icon="car"]');
+
+    flightIcons.forEach(function(icon) {
+      icon.style.animation = 'float-icon-flight 4s ease-in-out infinite';
+    });
+    lodgingIcons.forEach(function(icon) {
+      icon.style.animation = 'float-icon-lodging 4.5s ease-in-out infinite';
+    });
+    carIcons.forEach(function(icon) {
+      icon.style.animation = 'float-icon-car 4.2s ease-in-out infinite';
+    });
+
+    // Add glassmorphism to modals and sidebars
+    applyGlassmorphism();
+  }
+
+  /**
+   * Apply glassmorphism effect to modals and sidebars
+   */
+  function applyGlassmorphism() {
+    // Sidebar glassmorphism
+    var sidebar = document.querySelector('.sidebar');
+    if (sidebar && !sidebar.hasAttribute('data-glassmorphism')) {
+      sidebar.style.background = 'rgba(255, 255, 255, 0.8)';
+      sidebar.style.backdropFilter = 'blur(10px)';
+      sidebar.style.webkitBackdropFilter = 'blur(10px)';
+      sidebar.setAttribute('data-glassmorphism', 'true');
+    }
+
+    // Modal glassmorphism
+    var modal = document.querySelector('.ov-modal');
+    if (modal && !modal.hasAttribute('data-glassmorphism')) {
+      modal.style.background = 'rgba(255, 255, 255, 0.85)';
+      modal.style.backdropFilter = 'blur(12px)';
+      modal.style.webkitBackdropFilter = 'blur(12px)';
+      modal.setAttribute('data-glassmorphism', 'true');
+    }
+
+    // Modal backdrop blur
+    var backdrop = document.querySelector('.ov-modal-backdrop');
+    if (backdrop && !backdrop.hasAttribute('data-glassmorphism')) {
+      backdrop.style.backdropFilter = 'blur(5px)';
+      backdrop.style.webkitBackdropFilter = 'blur(5px)';
+      backdrop.setAttribute('data-glassmorphism', 'true');
+    }
+  }
+
+  /**
+   * Add CSS animations for floating icons (inject into style tag if not present)
+   */
+  function injectFloatingAnimations() {
+    var styleId = 'floating-animations-3d';
+    if (!document.getElementById(styleId)) {
+      var style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        @keyframes float-icon-flight {
+          0%, 100% { transform: translateY(0px) rotateZ(0deg); }
+          50% { transform: translateY(-12px) rotateZ(2deg); }
+        }
+        @keyframes float-icon-lodging {
+          0%, 100% { transform: translateY(0px) rotateZ(0deg); }
+          50% { transform: translateY(-15px) rotateZ(-2deg); }
+        }
+        @keyframes float-icon-car {
+          0%, 100% { transform: translateY(0px) rotateZ(0deg); }
+          50% { transform: translateY(-10px) rotateZ(1.5deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  /**
+   * Initialize 3D enhancements when DOM is ready
+   */
+  function init3DEnhancements() {
+    injectFloatingAnimations();
+    apply3DEnhancementsToCards();
+
+    // Re-apply when cards are dynamically added
+    var observer = new MutationObserver(function() {
+      apply3DEnhancementsToCards();
+    });
+
+    var observerOptions = {
+      childList: true,
+      subtree: true,
+      attributes: false
+    };
+
+    var targetNode = document.querySelector('.content') || document.body;
+    observer.observe(targetNode, observerOptions);
+  }
+
+  // Auto-init 3D enhancements
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init3DEnhancements);
+  } else {
+    setTimeout(init3DEnhancements, 100);
+  }
+
 }()); /* end IIFE */
