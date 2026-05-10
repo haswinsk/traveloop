@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -643,6 +644,7 @@
 <div class="bottom-toast" id="toast"></div>
 
 <script>
+  const API_BASE = 'http://localhost:8080/api/trip';
   const PLACES = [
     {name:"Fushimi Inari Taisha",type:"Shinto shrine · Fushimi",lat:34.9671,lng:135.7727,g:0,color:"#3B82F6",num:"1",img:"https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?auto=format&fit=crop&w=320&q=80"},
     {name:"Kinkaku-ji",type:"Buddhist temple · Northern Kyoto",lat:35.0394,lng:135.7292,g:0,color:"#3B82F6",num:"2",img:"https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=320&q=80"},
@@ -914,19 +916,38 @@
     document.getElementById("cancel-date-modal")?.addEventListener("click", () => closeModal("date-modal-backdrop"));
     document.getElementById("close-invite-modal")?.addEventListener("click", () => closeModal("invite-modal-backdrop"));
 
-    /* Apply: update overviewState then refresh itinerary day headers immediately */
-    document.getElementById("apply-date-modal")?.addEventListener("click", () => {
+    /* Apply: persist first, then update local UI only on HTTP 200 */
+    document.getElementById("apply-date-modal")?.addEventListener("click", async () => {
       const s = document.getElementById("trip-start-date").value;
       const e = document.getElementById("trip-end-date").value;
+      const applyBtn = document.getElementById("apply-date-modal");
       if (!s || !e) return showToast("Please select both dates");
       if (parseISODate(e) < parseISODate(s)) return showToast("End date must be after start date");
-      overviewState.startDate = s;
-      overviewState.endDate = e;
-      renderOverviewState();
-      if (window.itinerary && typeof window.itinerary.renderItinerary === 'function') {
-        window.itinerary.renderItinerary();
+      if (!applyBtn) return;
+
+      const originalText = applyBtn.textContent;
+      applyBtn.disabled = true;
+      applyBtn.textContent = "Saving...";
+
+      try {
+        const response = await axios.post(`${API_BASE}/update`, { startDate: s, endDate: e });
+        if (response.status === 200) {
+          overviewState.startDate = s;
+          overviewState.endDate = e;
+          renderOverviewState();
+          if (window.itinerary && typeof window.itinerary.renderItinerary === 'function') {
+            window.itinerary.renderItinerary();
+          }
+          closeModal("date-modal-backdrop");
+        } else {
+          console.error("[Nexus Arc] Failed to persist trip dates. Status:", response.status);
+        }
+      } catch (err) {
+        console.warn("[Nexus Arc] Backend offline, using local state.");
+        console.error(err);
       }
-      closeModal("date-modal-backdrop");
+      applyBtn.disabled = false;
+      applyBtn.textContent = originalText || "Apply";
     });
 
     document.querySelectorAll(".ov-tab").forEach((tab) => {
@@ -966,16 +987,34 @@
       wireOverviewEvents();
       renderOverviewState();
       initScrollSync();
-      if (window.itinerary && typeof window.itinerary.renderItinerary === 'function') {
-        window.itinerary.renderItinerary();
-      }
     } catch (err) {
       console.error(err);
       mount.innerHTML = "<div class='section'>Failed to load overview section.</div>";
     }
   }
 
-  loadOverviewPartial();
+  async function hydrateOverviewStateFromBackend() {
+    try {
+      const response = await axios.get(API_BASE);
+      if (response.status === 200 && response.data) {
+        overviewState.startDate = response.data.startDate || overviewState.startDate;
+        overviewState.endDate = response.data.endDate || overviewState.endDate;
+      }
+    } catch (err) {
+      console.warn("[Nexus Arc] Backend offline, using local state.");
+      console.error(err);
+    }
+  }
+
+  async function initOverviewApp() {
+    await hydrateOverviewStateFromBackend();
+    await loadOverviewPartial();
+    if (window.itinerary && typeof window.itinerary.renderItinerary === 'function') {
+      window.itinerary.renderItinerary();
+    }
+  }
+
+  window.addEventListener("load", initOverviewApp);
 
   window.addEventListener('load',()=>setTimeout(()=>{try{map.invalidateSize();}catch(e){}},200));
   window.addEventListener('resize',()=>setTimeout(()=>{try{map.invalidateSize();}catch(e){}},120));
